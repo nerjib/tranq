@@ -3,13 +3,14 @@ import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 
 // Custom Components
-// import Invoices from '../../containers/Invoices';
-// import Contacts from '../../containers/Contacts';
-// import Settings from '../../containers/Settings';
+;
 
 // Layout
 import { AppMainContent } from '../shared/Layout';
 import Form from '../../containers/form';
+import Invoice from '../../containers/invoice';
+import Contacts from '../../containers/contacts';
+import Settings from '../../containers/settings';
 
 class AppMain extends Component {
   shouldComponentUpdate(nextProps) {
@@ -21,9 +22,9 @@ class AppMain extends Component {
     return (
       <AppMainContent>
         {activeTab === 'form' && <Form />}
-        {/* {activeTab === 'invoices' && <Invoices />}
+        {activeTab === 'invoices' && <Invoice />}
         {activeTab === 'contacts' && <Contacts />}
-        {activeTab === 'settings' && <Settings />} */}
+        {activeTab === 'settings' && <Settings />}
       </AppMainContent>
     );
   }

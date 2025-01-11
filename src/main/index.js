@@ -1,8 +1,52 @@
 import { app, shell, BrowserWindow, ipcMain } from 'electron'
-import { join } from 'path'
+import path, { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+const sqlite3 = require('sqlite3').verbose();
+// const isDev = require('electron-is-dev');
 
+// import Database from 'better-sqlite3';
+
+// const {sqlite3} = require('sqlite3').verbose();
+
+// const db = new sqlite3.Database(path.join(__dirname, 'test.db'), (err) => {
+//   if (err) {
+//     console.error(err.message);
+//   }
+//   console.log('Connected to the test database.');
+// }
+// );
+
+// export function connect() {
+//   return Database(
+//     path.join(__dirname, '../../../', 'release/app', 'mydb.db'),
+//     { verbose: console.log, fileMustExist: true },
+//   );
+// }
+
+let db;
+
+function initializeDatabase() {
+    const dbPath = path.join(app.getPath('userData'), 'lodge_data.db'); // Store in user data directory
+    db = new sqlite3.Database(dbPath, (err) => {
+        if (err) {
+            return console.error("Database opening error: ",err.message);
+        }
+        console.log('Connected to the SQLite database.');
+        db.run(`
+            CREATE TABLE IF NOT EXISTS rooms (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL,
+                description TEXT,
+                price INTEGER,
+                images TEXT
+            )
+        `);
+        //Create other tables here
+    });
+}
+
+// connect();
 function createWindow() {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
@@ -40,6 +84,7 @@ function createWindow() {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(() => {
   // Set app user model id for windows
+  initializeDatabase();
   electronApp.setAppUserModelId('com.electron')
 
   // Default open or close DevTools by F12 in development
@@ -72,3 +117,34 @@ app.on('window-all-closed', () => {
 
 // In this file you can include the rest of your app"s specific main process
 // code. You can also put them in separate files and require them here.
+
+ipcMain.handle('get-rooms-offline', async () => {
+  return new Promise((resolve, reject) => {
+      db.all('SELECT * FROM rooms', [], (err, rows) => {
+          if(err) reject(err)
+          resolve(rows)
+      })
+  })
+})
+
+ipcMain.handle('save-rooms-offline', async (event, rooms) => {
+  try {
+      const stmt = db.prepare('INSERT OR REPLACE INTO rooms (id, name, description, price, images) VALUES (?, ?, ?, ?, ?)');
+      for (const room of rooms) {
+          await new Promise((resolve, reject) => {
+              stmt.run(room.id, room.name, room.description, room.price, room.images, (err) => {
+                  if (err) {
+                      reject(err);
+                  } else {
+                      resolve();
+                  }
+              });
+          });
+      }
+      stmt.finalize();
+      return { success: true };
+  } catch (error) {
+    console.error("Error saving rooms offline:", error);
+    return { success: false, error: error.message };
+  }
+})

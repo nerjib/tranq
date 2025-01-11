@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
+import logo from '../assets/icon.png'
 
 const RoomTypeSelect = ({ roomType, setRoomType }) => {
   const roomTypes = [
-    { value: 'Standard', label: 'Standard', price: 100 },
-    { value: 'Deluxe', label: 'Deluxe', price: 150 },
-    { value: 'Suite', label: 'Suite', price: 200 },
+    { value: 'Standard Suite', label: 'Standard Suite', price: 40000 },
+    { value: 'Deluxe Suite 1', label: 'Deluxe Suite 1', price: 45000 },
+    { value: 'Deluxe Suite 2', label: 'Deluxe Suite 2', price: 45000 },
+    { value: 'Deluxe Suite 3', label: 'Deluxe Suite 3', price: 45000 },
+    { value: 'King Suite', label: 'King Suite', price: 55000 },
   ];
 
   return (
@@ -30,25 +33,27 @@ const Form = () => {
   const [guestName, setGuestName] = useState('');
   const [address, setAddress] = useState('');
   const [contact, setContact] = useState('');
-  const [roomType, setRoomType] = useState('Deluxe');
-  const [nights, setNights] = useState(3);
+  const [roomType, setRoomType] = useState('Standard Suite');
+  const [nights, setNights] = useState(1);
 
   // Helper function to find room price
   const getRoomPrice = () => {
-    const room = ['Standard', 'Deluxe', 'Suite'].find(r => r === roomType);
-    return room === 'Standard' ? 100 : room === 'Deluxe' ? 150 : 200;
+    const room = ['Standard Suite', 'Deluxe Suite 1', 'Suite'].find(r => r === roomType);
+    return room === 'Standard Suite' ? 40000 
+    : (room === 'Deluxe Suite 1' || room === 'Deluxe Suite 2' ||room === 'Deluxe Suite 3' )
+    ? 45000 : 55000;
   };
 
   // Calculate totals
   const roomCost = getRoomPrice() * nights;
-  const tax = roomCost * 0.1; // 10% tax for simplicity
+  const tax = roomCost * 0.75; // 10% tax for simplicity
   const total = roomCost + tax;
 
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-4">
-        <h1 className="text-2xl font-bold">Hotel XYZ Invoice</h1>
-        <img src="hotel-logo.png" alt="Hotel Logo" className="h-16 w-16" />
+        <h1 className="text-2xl font-bold">Tranquilty Lodge Invoice</h1>
+        <img src={logo} alt="lodge Logo" className="h-16 w-16" />
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow-md">
@@ -83,11 +88,19 @@ const Form = () => {
         <div className="mb-4">
           <h2 className="text-lg font-semibold mb-2">Room and Charges</h2>
           <RoomTypeSelect roomType={roomType} setRoomType={setRoomType} />
+          <h4 className="text-lg font-semibold mb-2">Number of Nights</h4>
+          <input
+            type="number"
+            min={1}
+            value={nights}
+            onChange={(e) => setNights(e.target.value)}          
+          className="w-full p-2 border rounded-md" placeholder="Number of nights" 
+          />
           <div className="grid grid-cols-2 gap-4">
-            <div>Rate: ${getRoomPrice()}/night</div>
+            <div>Rate: N{getRoomPrice()}/night</div>
             <div className="text-right">Nights: {nights}</div>
             <div>Total:</div>
-            <div className="text-right">${roomCost}</div>
+            <div className="text-right">N{roomCost}</div>
           </div>
         </div>
 
@@ -95,16 +108,16 @@ const Form = () => {
         <div className="mb-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="text-right font-bold">Subtotal:</div>
-            <div className="text-right">${roomCost}</div>
-            <div className="text-right font-bold">Tax (10%):</div>
-            <div className="text-right">${tax.toFixed(2)}</div>
+            <div className="text-right">N{roomCost}</div>
+            <div className="text-right font-bold">Tax (7.5%):</div>
+            <div className="text-right">N{tax.toFixed(2)}</div>
             <div className="text-right font-bold">Total:</div>
-            <div className="text-right text-xl font-bold">${total.toFixed(2)}</div>
+            <div className="text-right text-xl font-bold">N{total.toFixed(2)}</div>
           </div>
         </div>
 
         <div className="text-sm text-gray-600">
-          <p>Thank you for choosing Hotel XYZ. Please review the charges above. Payments can be made via credit card at the front desk or online at www.hotelxyz.com/pay.</p>
+          {/* <p>Thank you for choosing Hotel XYZ. Please review the charges above. Payments can be made via credit card at the front desk or online at www.hotelxyz.com/pay.</p> */}
         </div>
       </div>
     </div>

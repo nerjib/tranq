@@ -44,6 +44,7 @@ const allTabs = [
 
 // Styles
 import styled from 'styled-components';
+import { PeopleAlt, Receipt, Settings } from '@mui/icons-material';
 
 export const SideBar = styled.div`
   flex: 1;
@@ -100,7 +101,15 @@ function AppNav({ activeTab, changeTab }) {
   const marginTopValue = setMarginValue(activeTab);
   const allTabsComponent = allTabs.map(tab => (
     <Tab key={tab.name} href="#" onClick={() => changeTab(tab.name)}>
-      {tab.name === 'form' ? <DescriptionIcon /> : ''}
+      {tab.name === 'form' 
+        ? <DescriptionIcon /> 
+        : tab.name === 'invoices' 
+        ? <Receipt /> 
+        : tab.name === 'settings' 
+        ? <Settings /> 
+        :tab.name === 'contacts' 
+        ? <PeopleAlt /> 
+        :''}
     </Tab>
   ));
   return (
