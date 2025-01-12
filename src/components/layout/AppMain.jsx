@@ -11,6 +11,9 @@ import Form from '../../containers/form';
 import Invoice from '../../containers/invoice';
 import Contacts from '../../containers/contacts';
 import Settings from '../../containers/settings';
+import Rooms from '../../containers/rooms';
+import ReservationRecords from '../../containers/records';
+import Payments from '../../containers/payments';
 
 class AppMain extends Component {
   shouldComponentUpdate(nextProps) {
@@ -23,8 +26,12 @@ class AppMain extends Component {
       <AppMainContent>
         {activeTab === 'form' && <Form />}
         {activeTab === 'invoices' && <Invoice />}
+        {activeTab === 'records' && <ReservationRecords />}
         {activeTab === 'contacts' && <Contacts />}
         {activeTab === 'settings' && <Settings />}
+        {activeTab === 'rooms' && <Rooms />}
+        {activeTab === 'payments' && <Payments />}
+
       </AppMainContent>
     );
   }

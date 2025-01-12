@@ -1,8 +1,10 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, session } from 'electron'
 import path, { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 const sqlite3 = require('sqlite3').verbose();
+const nodemailer = require('nodemailer');
+
 // const isDev = require('electron-is-dev');
 
 // import Database from 'better-sqlite3';
@@ -42,10 +44,45 @@ function initializeDatabase() {
                 images TEXT
             )
         `);
+        db.run(`
+          CREATE TABLE IF NOT EXISTS bookings (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              booking_id TEXT UNIQUE NOT NULL,
+              name TEXT,
+              email TEXT,
+              phone TEXT,
+              room_types TEXT[],
+              check_in DATE NOT NULL,
+              check_out DATE NOT NULL,
+              guests INTEGER,
+              special_requests TEXT,
+              payment_id TEXT
+              is_paid BOOLEAN DEFAULT FALSE
+          )
+      `);
+      db.run(`
+        CREATE TABLE IF NOT EXISTS payments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            payment_id TEXT UNIQUE NOT NULL,
+            booking_id TEXT NOT NULL,
+            date Timestamp not null,
+            amount INTEGER,
+            status VARCHAR
+        )
+    `);
         //Create other tables here
     });
 }
-
+const transporter = nodemailer.createTransport({
+  host: 'mail.tranquilitylodgekd.com',
+  port: 465,
+  secure: true,
+  // service: 'gmail', // or your email service
+  auth: {
+      user: 'payments@tranquilitylodgekd.com', // Your email address
+      pass: 'tranquility@2025', // Your email password or app password (recommended)
+  },
+});
 // connect();
 function createWindow() {
   // Create the browser window.
@@ -74,6 +111,16 @@ function createWindow() {
   // Load the remote URL for development or the local html file for production.
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+      // mainWindow.webContents.openDevTools();
+      session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+          callback({
+              responseHeaders: {
+                  ...details.responseHeaders,
+                  'Content-Security-Policy': ['default-src \'self\' \'unsafe-inline\' connect-src \'self\' http://localhost:5001 ws://localhost:5001 \'unsafe-eval\''] // Add your backend URL
+              }
+          })
+      })
+
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
@@ -148,3 +195,89 @@ ipcMain.handle('save-rooms-offline', async (event, rooms) => {
     return { success: false, error: error.message };
   }
 })
+
+ipcMain.handle('get-reservations-offline', async () => {
+  return new Promise((resolve, reject) => {
+      db.all('SELECT * FROM bookings', [], (err, rows) => {
+          if (err) {
+              reject(err);
+          }
+          resolve(rows);
+      });
+  });
+});
+
+ipcMain.handle('save-reservations-offline', async (event, reservations) => {
+  try {
+      const stmt = db.prepare('INSERT OR REPLACE INTO bookings (id, booking_id, name, email, phone, room_types, check_in, check_out, guests, special_requests, payment_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+      for (const reservation of reservations) {
+          await new Promise((resolve, reject) => {
+              stmt.run(reservation.id, reservation.booking_id, reservation.name, reservation.email, reservation.phone, JSON.stringify(reservation.room_types), reservation.check_in, reservation.check_out, reservation.guests, reservation.special_requests, reservation.payment_id, (err) => {
+                  if (err) {
+                      reject(err);
+                  } else {
+                      resolve();
+                  }
+              });
+          });
+      }
+      stmt.finalize();
+      console.log("saving reservations offline:");
+      // alert("saving reservations offline successful");
+      return { success: true };
+  } catch (error) {
+      console.error("Error saving reservations offline:", error);
+      return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-payments-offline', async () => {
+  return new Promise((resolve, reject) => {
+      db.all('SELECT * FROM payments', [], (err, rows) => {
+          if (err) {
+              reject(err);
+          }
+          resolve(rows);
+      });
+  });
+});
+
+ipcMain.handle('save-payments-offline', async (event, payments) => {
+  try {
+      const stmt = db.prepare('INSERT OR REPLACE INTO payments (payment_id, booking_id, date, amount, status) VALUES (?, ?, ?, ?, ?)');
+      for (const payment of payments) {
+          await new Promise((resolve, reject) => {
+              stmt.run(payment.payment_id, payment.booking_id, payment.created_at, payment.amount, payment.status, (err) => {
+                  if (err) {
+                      reject(err);
+                  } else {
+                      resolve();
+                  }
+              });
+          });
+      }
+      stmt.finalize();
+      return { success: true };
+  } catch (error) {
+      console.error("Error saving payments offline:", error);
+      return { success: false, error: error.message };
+  }
+});
+ipcMain.handle('send-invoice-email', async (event, { to, subject, html, attachments }) => {
+  try {
+      const mailOptions = {
+          from: 'payments@tranquilitylodgekd.com', // Sender address
+          to: to, // Recipient address
+          subject: subject, // Subject line
+          html: html, // Email body (HTML)
+          attachments: attachments,
+      };
+
+      const info = await transporter.sendMail(mailOptions);
+      console.log('Message sent: %s', info.messageId);
+      return { success: true, message: 'Email sent successfully!' };
+  } catch (error) {
+      console.error('Error sending email:', error);
+      return { success: false, message: error.message };
+  }
+});

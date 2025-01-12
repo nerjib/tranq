@@ -31,6 +31,16 @@ const allTabs = [
     icon: 'ion-ios-filing',
   },
   {
+    title: 'Records',
+    name: 'records',
+    icon: 'ion-ios-filing',
+  },
+  {
+    title: 'Payments',
+    name: 'payments',
+    icon: 'ion-ios-filing',
+  },
+  {
     title: 'Contacts',
     name: 'contacts',
     icon: 'ion-person-stalker',
@@ -40,11 +50,16 @@ const allTabs = [
     name: 'settings',
     icon: 'ion-ios-gear',
   },
+  {
+    title: 'Rooms',
+    name: 'rooms',
+    icon: 'ion-ios-gear',
+  },
 ];
 
 // Styles
 import styled from 'styled-components';
-import { PeopleAlt, Receipt, Settings } from '@mui/icons-material';
+import { Book, Payment, PeopleAlt, Receipt, Settings } from '@mui/icons-material';
 
 export const SideBar = styled.div`
   flex: 1;
@@ -108,7 +123,13 @@ function AppNav({ activeTab, changeTab }) {
         : tab.name === 'settings' 
         ? <Settings /> 
         :tab.name === 'contacts' 
+        ? <PeopleAlt />
+        :tab.name === 'rooms' 
         ? <PeopleAlt /> 
+        :tab.name === 'records' 
+        ? <Book /> 
+        :tab.name === 'payments' 
+        ? <Payment />
         :''}
     </Tab>
   ));
