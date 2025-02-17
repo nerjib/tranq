@@ -18,12 +18,15 @@
     "build:linux": "npm run build && electron-builder --linux"
   },
   "dependencies": {
+    "@ant-design/icons": "^5.6.1",
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^3.0.0",
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^6.3.0",
     "@mui/material": "^6.3.0",
+    "antd": "^5.24.0",
+    "axios": "^1.7.9",
     "better-sqlite3-with-prebuilds": "^7.4.3",
     "buffer": "^6.0.3",
     "electron-is-dev": "^3.0.1",
@@ -35,9 +38,11 @@
     "npm": "^11.0.0",
     "pouchdb-browser": "^9.0.0",
     "react-datepicker": "^7.6.0",
+    "react-hold-on": "^1.0.1",
     "react-motion": "^0.5.2",
     "sqlite3": "^5.1.7",
-    "styled-components": "^6.1.13"
+    "styled-components": "^6.1.13",
+    "sweetalert2": "^11.16.1"
   },
   "devDependencies": {
     "@electron-toolkit/eslint-config": "^1.0.2",
@@ -61,7 +66,7 @@
       "@electron-forge/plugin-webpack",
       {
         "mainConfig": "./webpack.main.config.js",
-        "devContentSecurityPolicy": "connect-src 'self' http://localhost:5001 'unsafe-eval'",
+        "devContentSecurityPolicy": "connect-src 'self' https://lodgeback-cbc389a0f95e.herokuapp.com 'unsafe-eval'",
         "renderer": {
           "config": "./webpack.renderer.config.js",
           "entryPoints": [

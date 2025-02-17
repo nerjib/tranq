@@ -4,8 +4,12 @@ import 'jspdf-autotable';
 import { Buffer } from 'buffer';
 import logo from '../assets/icon.png'
 import { currencyFormatter } from '../helpers/utils';
+import { baseUrl } from '../helpers/https';
+import Swal from 'sweetalert2';
+import axios from 'axios';
+import { hideLoader, showLoader } from '../utils/loader';
 
-const RoomTypeSelect = ({ roomType, setRoomType, rooms }) => {
+const RoomTypeSelect = ({ roomType, setRoomType, rooms, checkIn, checkOut }) => {
  
 
   const roomTypes = [
@@ -16,12 +20,42 @@ const RoomTypeSelect = ({ roomType, setRoomType, rooms }) => {
     { value: 'King Suite', label: 'King Suite', price: 55000 },
   ];
 
-  const handleChange = (e) => {
+  const handleAvailabilityCheck = async(roomType) => {
+    if (!checkIn || !checkOut) {
+      Swal.fire('Checkin and Checkout dates must be selected!')
+      return false;
+    }
+      // Swal.fire('Checking room availalability')
+    try {
+        showLoader();
+        const response = await fetch(`${baseUrl}/rooms/availability/${roomType}/${checkIn}/${checkOut}`);
+        if (!response.ok) {
+          hideLoader();
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        let avail = false;
+        const res = await response.json();
+        console.log({res})
+    if (res.status){
+      avail = res?.isAvalable;
+    }
+    return avail;
+    } catch (error) {
+        console.error('Error fetching/saving payments:', error);
+    } finally {
+      hideLoader();
+    }
+  }
+  const handleChange = async(e) => {
     const { name, value, checked } = e.target;
   //   setRoomType(prevRoomType => ({
   //     ...prevRoomType,
   //     [name]: type === 'checkbox' ? (checked ? [...prevRoomType[name], value] : prevRoomType[name].filter(item => item !== value)) : value
   // }));
+  const avail = await handleAvailabilityCheck(value);
+  if (!avail) {
+    return Swal.fire(`${value} is not available for the dates selected!` );
+  }
   setRoomType(prevRoomType => checked ? [...prevRoomType, value] : prevRoomType.filter(item => item !== value));
 };
   return (
@@ -35,6 +69,7 @@ const RoomTypeSelect = ({ roomType, setRoomType, rooms }) => {
           // disabled={roomName !== null && roomName !== room?.name}
         />
           {`${room?.name} - ${currencyFormatter(room?.price)}`}
+          <br/>
         </label>
         ))}
     </div>
@@ -48,11 +83,12 @@ const Form = () => {
   const [address, setAddress] = useState('');
   const [contact, setContact] = useState('');
   const [roomType, setRoomType] = useState([]);
-  const [nights, setNights] = useState(1);
+  const [guest, setGuest] = useState(1);
   const [rooms, setRooms] = useState([]);
   const [online, setOnline] = useState(navigator.onLine);
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
+  const [email, setEmail] = useState('');
 
   useEffect(() => {
       function handleOnline() {
@@ -81,7 +117,7 @@ const Form = () => {
 
   const synchronizeData = async () => {
       try {
-          const response = await fetch('http://localhost:5001/api/v1/lodge/rooms');
+          const response = await fetch(`${baseUrl}/rooms`);
           const onlineRooms = await response.json();
           setRooms(onlineRooms);
           const result = await window.electronAPI.saveRoomsOffline(onlineRooms)
@@ -118,13 +154,15 @@ const Form = () => {
   };
 
   // Calculate totals
-  const roomCost = getRoomPrice() * nights;
+  const nights = Math.ceil((new Date(checkOut) - new Date(checkIn)) / (1000 * 60 * 60 * 24));
+
+  const roomCost = (getRoomPrice() * nights);
   const cautionFee = roomType.length * 20000;
   let discount =0;
-  if(nights > 3 || roomType.length > 3){
-    discount = roomCost * 0.2;
-  }
-  const total = roomCost + cautionFee - discount;
+  // if(nights > 3 || roomType.length > 3){
+  //   discount = roomCost * 0.2;
+  // }
+  const total = roomCost + cautionFee;
 
   const generatePDF = async () => {
         const doc = new jsPDF();
@@ -150,7 +188,7 @@ const Form = () => {
         // const total = calculateTotal();
         doc.text(`Subtotal: ${currencyFormatter(roomCost)}`, 10, doc.lastAutoTable.finalY + 10);
         doc.text(`Caution Fee (Refundable): ${currencyFormatter(cautionFee)}`, 10, doc.lastAutoTable.finalY + 20);
-        doc.text(`Discount: ${(discount)}`, 10, doc.lastAutoTable.finalY + 30);
+        // doc.text(`Discount: ${(discount)}`, 10, doc.lastAutoTable.finalY + 30);
         doc.text(`Total: ${currencyFormatter(total)}`, 10, doc.lastAutoTable.finalY + 40);
 
         doc.text(`Thanks for your patronage`, 10, doc.lastAutoTable.finalY + 50);
@@ -183,6 +221,40 @@ const Form = () => {
           alert(`Error sending invoice: ${result.message}`);
       }
   };
+
+  const handleBooking = async () => {
+    const formData =
+    {
+        roomTypes: roomType,
+        checkIn,
+        checkOut,
+        guests: guest,
+        name: guestName,
+        email,
+        phone: contact
+      
+     }
+    try{
+      showLoader();
+    const response = await axios.post(`${baseUrl}/booking`, formData)
+    const totalAmount = rooms.filter(room => roomType.includes(room.name)).reduce((acc, room) => acc + room.price, 0);
+    // const res = response.json()
+    if (response?.data?.status && response?.data?.data[0]?.booking_id) {
+      Swal.fire('Successful', `Invoice and payment link has been sent to your ${email}`, 'Done')
+      setRoomType([]);
+      setCheckIn('');
+      setCheckOut('');
+      setGuestName('');
+      setEmail('');
+      setContact('');
+      // navigate(`/payment/${res?.data[0]?.booking_id}`, { state: { bookingData: {...formData, booking_id: res?.data[0]?.booking_id} , totalAmount: totalAmount } });
+    }
+  }catch(err){
+    console.log(err)
+  } finally{
+    hideLoader();
+  }
+  }
   return (
     <div className="container mx-auto p-4">
       <div className="flex justify-between items-center mb-4">
@@ -215,7 +287,11 @@ const Form = () => {
                 name="checkIn"
                 className='w-full p-2 border rounded-md'
                 value={checkIn}
-                onChange={(e) => setCheckIn(e.target.value)}
+                onChange={(e) => {
+                  setCheckIn(e.target.value)
+                  setCheckOut('');
+                  setRoomType([]);
+                }}
                 required
                 min={new Date().toISOString().split('T')[0]} // Disable past dates
                 // disabled
@@ -229,7 +305,10 @@ const Form = () => {
                 name="checkOut"
                 className='w-full p-2 border rounded-md'
                 value={checkOut}
-                onChange={(e) => setCheckOut(e.target.value)}
+                onChange={(e) => {
+                  setCheckOut(e.target.value)
+                  setRoomType([]);
+                }}
                 required
                 min={checkIn || new Date().toISOString().split('T')[0]}
                 // disabled
@@ -243,27 +322,22 @@ const Form = () => {
           <h2 className="text-lg font-semibold mb-2">Customer Information</h2>
           <input type="text" className="w-full p-2 border rounded-md mb-2" placeholder="Guest Name" value={guestName} onChange={(e) => setGuestName(e.target.value)} />
           <input type="text" className="w-full p-2 border rounded-md mb-2" placeholder="Address" value={address} onChange={(e) => setAddress(e.target.value)} />
+          <input type="email" className="w-full p-2 border rounded-md" placeholder="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           <input type="text" className="w-full p-2 border rounded-md" placeholder="08012345678" value={contact} onChange={(e) => setContact(e.target.value)} />
         </div>
 
         {/* Room and Charges */}
         <div className="mb-4">
           <h2 className="text-lg font-semibold mb-2">Room and Charges</h2>
-          <RoomTypeSelect roomType={roomType} setRoomType={setRoomType} rooms={rooms}/>
-          <h4 className="text-lg font-semibold mb-2">Number of Nights</h4>
+          <RoomTypeSelect roomType={roomType} setRoomType={setRoomType} rooms={rooms} checkIn={checkIn} checkOut={checkOut}/>
+          <h4 className="text-lg font-semibold mb-2">Number of Guest</h4>
           <input
             type="number"
             min={1}
-            value={nights}
-            onChange={(e) => setNights(e.target.value)}          
-          className="w-full p-2 border rounded-md" placeholder="Number of nights" 
+            value={guest}
+            onChange={(e) => setGuest(e.target.value)}          
+          className="w-full p-2 border rounded-md" placeholder="Number of Guest" 
           />
-          {/* <div className="grid grid-cols-2 gap-4">
-            <div>Rate: N{getRoomPrice()}/night</div>
-            <div className="text-right">Nights: {nights}</div>
-            <div>Total:</div>
-            <div className="text-right">N{roomCost}</div>
-          </div> */}
         </div>
 
         {/* Totals */}
@@ -273,19 +347,21 @@ const Form = () => {
             <div className="text-right">{currencyFormatter(roomCost)}</div>
             <div className="text-right font-bold">Caution Fee (Refundable)</div>
             <div className="text-right">{currencyFormatter(cautionFee)}</div>
-            <div className="text-right font-bold">Discount</div>
-            <div className="text-right">{currencyFormatter(discount)}</div>
+            {/* <div className="text-right font-bold">Discount</div>
+            <div className="text-right">{currencyFormatter(discount)}</div> */}
             <div className="text-right font-bold">Total:</div>
             <div className="text-right text-xl font-bold">{currencyFormatter(total)}</div>
           </div>
         </div>
-        <div className="mt-6">
+        {/* <div className="mt-6">
             <button onClick={generatePDF} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Generate PDF</button>
-        </div>
-        <div className="mt-6">
+        </div> */}
+        {/*<div className="mt-6">
             <button onClick={sendEmail} className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Send Email PDF</button>
-        </div>
-
+        </div> */}
+        <div className="mt-6">
+            <button onClick={handleBooking} className="bg-[#ff6700] hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Submit Booking</button>
+        </div> 
         <div className="text-sm text-gray-600">
           {/* <p>Thank you for choosing Hotel XYZ. Please review the charges above. Payments can be made via credit card at the front desk or online at www.hotelxyz.com/pay.</p> */}
         </div>

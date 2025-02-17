@@ -191,6 +191,8 @@ const Payments = () => {
                     <tr className="bg-gray-100">
                         {/* <th className="border p-2">ID</th> */}
                         <th className="border p-2">Payment Reference</th>
+                        <th className="border p-2">Customer Name</th>
+                        <th className="border p-2">Customer Email</th>
                         <th className="border p-2">Date</th>
                         <th className="border p-2">Amount</th>
                         <th className="border p-2">Status</th>
@@ -216,8 +218,10 @@ const Payments = () => {
                         }).map(payment => (
                             <tr key={payment.id}>
                                 <td className="border p-2">{payment.payment_id}</td>
+                                <td className="border p-2">{payment.book_data?.name}</td>
+                                <td className="border p-2">{payment.book_data?.email}</td>
                                 <td className="border p-2">{formatDate(payment.created_at)}</td>
-                                <td className="border p-2">{payment.amount}</td>
+                                <td className="border p-2">{currencyFormatter(payment.amount)}</td>
                                 <td className="border p-2">{payment.status === 'success' ? 'Paid' : 'Unpaid'}</td>
                                 {/* Add other payment data */}
                             </tr>

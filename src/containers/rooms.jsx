@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { baseUrl } from '../helpers/https';
 
 const Rooms = () => {
     const [rooms, setRooms] = useState([]);
@@ -31,7 +32,7 @@ const Rooms = () => {
 
     const synchronizeData = async () => {
         try {
-            const response = await fetch('http://localhost:5001/api/v1/lodge/rooms');
+            const response = await fetch(`${baseUrl}/rooms`);
             const onlineRooms = await response.json();
             setRooms(onlineRooms);
             const result = await window.electronAPI.saveRoomsOffline(onlineRooms)

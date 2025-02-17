@@ -25,11 +25,11 @@ const allTabs = [
     name: 'form',
     icon: 'ion-document-text',
   },
-  {
-    title: 'Invoices',
-    name: 'invoices',
-    icon: 'ion-ios-filing',
-  },
+  // {
+  //   title: 'Invoices',
+  //   name: 'invoices',
+  //   icon: 'ion-ios-filing',
+  // },
   {
     title: 'Records',
     name: 'records',
@@ -50,11 +50,11 @@ const allTabs = [
     name: 'settings',
     icon: 'ion-ios-gear',
   },
-  {
-    title: 'Rooms',
-    name: 'rooms',
-    icon: 'ion-ios-gear',
-  },
+  // {
+  //   title: 'Rooms',
+  //   name: 'rooms',
+  //   icon: 'ion-ios-gear',
+  // },
 ];
 
 // Styles

@@ -57,9 +57,12 @@ function initializeDatabase() {
               guests INTEGER,
               special_requests TEXT,
               payment_id TEXT
-              is_paid BOOLEAN DEFAULT FALSE
+              is_paid BOOLEAN DEFAULT FALSE,
+              amount TEXT,
+              status TEXT
           )
       `);
+      // db.run(`ALTER TABLE bookings ADD COLUMN status TEXT`);
       db.run(`
         CREATE TABLE IF NOT EXISTS payments (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -91,7 +94,7 @@ function createWindow() {
     height: 670,
     show: false,
     autoHideMenuBar: true,
-    ...(process.platform === 'linux' ? { icon } : {}),
+    ...(process.platform === 'linux' ? { icon } : { icon }),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -116,7 +119,7 @@ function createWindow() {
           callback({
               responseHeaders: {
                   ...details.responseHeaders,
-                  'Content-Security-Policy': ['default-src \'self\' \'unsafe-inline\' connect-src \'self\' http://localhost:5001 ws://localhost:5001 \'unsafe-eval\''] // Add your backend URL
+                  'Content-Security-Policy': ['default-src \'self\' \'unsafe-inline\' connect-src \'self\' https://lodgeback-cbc389a0f95e.herokuapp.com ws://lodgeback-cbc389a0f95e.herokuapp.com \'unsafe-eval\''] // Add your backend URL
               }
           })
       })
@@ -209,10 +212,10 @@ ipcMain.handle('get-reservations-offline', async () => {
 
 ipcMain.handle('save-reservations-offline', async (event, reservations) => {
   try {
-      const stmt = db.prepare('INSERT OR REPLACE INTO bookings (id, booking_id, name, email, phone, room_types, check_in, check_out, guests, special_requests, payment_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+      const stmt = db.prepare('INSERT OR REPLACE INTO bookings (id, booking_id, name, email, phone, room_types, check_in, check_out, guests, special_requests, payment_id, amount, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
       for (const reservation of reservations) {
           await new Promise((resolve, reject) => {
-              stmt.run(reservation.id, reservation.booking_id, reservation.name, reservation.email, reservation.phone, JSON.stringify(reservation.room_types), reservation.check_in, reservation.check_out, reservation.guests, reservation.special_requests, reservation.payment_id, (err) => {
+              stmt.run(reservation.id, reservation.booking_id, reservation.name, reservation.email, reservation.phone, JSON.stringify(reservation.room_types), reservation.check_in, reservation.check_out, reservation.guests, reservation.special_requests, reservation.payment_id, reservation.amount, reservation.status, (err) => {
                   if (err) {
                       reject(err);
                   } else {
